@@ -1,0 +1,90 @@
+---
+title: "Inferential Analysis of Tooth Growth in Guinea Pigs"
+author: "Tyler Peterson"
+date: "10/29/2016"
+output: pdf_document
+---
+
+```{r Inference Setup, include=TRUE, echo = FALSE}
+# Loading libraries
+  library(datasets)
+  library(lattice)
+
+# Loading data
+  df <- ToothGrowth
+```
+
+## Overview
+In this project, we analyze the length of odontoblasts (cells responsible for tooth growth) in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods - orange juice (coded as OJ) or ascorbic acid (a form of vitamin C and coded as VC).
+
+## Exploring the data:
+```{r EDA, echo = TRUE}
+# Exploring the data
+  str(df)
+  #head(df)
+  #df
+```
+
+From examining the dataset, we see that the structure of the ToothGrowth dataframe contains 2 levels for the supplementation column (supp), which is a factor variable, but an unknown number of levels for the dose and length (len) columns.  In our analyses, we expect the len variable to be the dependent variable, so we are less concerned with the number of levels it contains, but need to know the number of levels the dose variable has.  We aggregate the length based on dose size and and see the number of unique tooth lengths per dose size For consistency, we aggregate the length based on supplement type to see the number of unique tooth lengths supplement types.  From this we see that both dose size and supplement size are discrete variables and will be treated as such in the analysis.
+
+```{r Unique Values, echo = TRUE}
+  aggregate(len ~ dose, df, function(x) length(unique(x)))
+  aggregate(len ~ supp, df, function(x) length(unique(x)))
+```
+
+We create several plots to attempt to visually determine a pattern and see what to expect when performing the analysis.  We first plot tooth length against supplement type with coloration per dose size.  This plot is not very helpful in establishing a distinct relationship between supplement type and tooth length.  We will not be using this plot in our analysis.
+
+In our second plot, we plot tooth length against dose size with coloration per supplement type.  In this plot, it appears that there is a correlation between tooth length and dose size; larger dose sizes lead to longer tooth lengths.  
+
+The third plot is a histogram of the tooth lengths.  We include this plot to simply illustrate that there does not appear to be any outliers in the tooth lengths and we can include all tooth lengths in our analysis.
+
+The final plot is a panel box plot segmenting the tooth length by dose size, then illustrating the supplement type per dose size.  The correlation between tooth length and dose size is clearly visible in this graph, but again we're left with no clear distinction between supplement delivery type.  There doesn't appear to be a strong relationship between delivering vitamin C through orange juice or ascorbic acid. 
+
+```{r EDA Plots, echo = FALSE}
+  par(mfrow = c(1,3))
+  plot(df$len, df$supp, col = df$dose, xlab = "Tooth Length", ylab = "Supplement Type")
+  plot(df$len, df$dose, col = df$supp, xlab = "Tooth Length", ylab = "Dose size")
+  hist(df$len, xlab = "Tooth Lenght", ylab = "Frequency", main = "Frequency of Tooth Measures")
+  bwplot(len~supp|factor(dose), data = df, xlab = "Supplementation Method",
+         ylab = "Tooth Length", main = "Vitamin C Supplementation by Dose Size",
+         col = c("red", "blue"))
+```
+
+## Assumptions
+Before beginning our analysis, we assume that there is no dependency between the vitamin C delivery type and the dosage size.  Furthermore, we assume that the guinea pig's tooth lengths are iid resulting from a random selection from within the population.
+
+## Analyzing the data
+Once we visually inspect the data, we begin our hypothesis testing.  In this testing, we use a single tailed Sudent's T Test and set our confidence level at 95%.  Furthermore, we will be performing hypothesis testing on both the tooth length compared to the dose size and the tooth length compared to the supplement type.
+
+### First test is checking to see if the dose size affects the tooth length
+  * H0 = Tooth length is not affected by dose size
+  * Ha = Tooth length is affected by dose size
+
+```{r Length/Dose Hypothesis Testing, echo = TRUE}
+  # Separate dose size into distinct subsets:
+  doseSub1 <- subset(df, df$dose %in% c(0.5, 1.0))  
+  doseSub2 <- subset(df, df$dose %in% c(0.5, 2.0))
+  doseSub3 <- subset(df, df$dose %in% c(1.0, 2.0))
+  
+  # Perform single tailed T Tests on the subsetted data
+  doseTTest1 <- t.test(len ~ dose, data = doseSub1)
+  doseTTest2 <- t.test(len ~ dose, data = doseSub2)
+  doseTTest3 <- t.test(len ~ dose, data = doseSub3)
+  
+  doseTTest1
+  doseTTest2
+  doseTTest3
+```  
+
+### Second test is checking to see if the supplement type affects tooth length
+  * H0 = Tooth length is not affected by supplement type
+  * Ha = Tooth length is affected by supplement type
+
+```{r Length/Supplement Hypothesis Testing, echo = TRUE}
+  # Since there only exists 2 types of supplementation, we will not subset the dataset
+  suppTTest <- t.test(len~supp, data = df)
+  suppTTest
+```
+
+## Conclusion:
+Since the p-value in the len/dose t tests were <<< 0.5, we can reject the null hypothesis that the dose of vitamin C does not affect tooth length.  However, since the p-value in the supplement test is > 0.5, we fail to reject the null hypothesis that the tooth length is not affected by the supplement type.  We conclude that vitamin C is a valuable supplement to help rodent's teeth grow longer, it does not matter if the supplement is delivered through orange juice or ascorbic acid.
